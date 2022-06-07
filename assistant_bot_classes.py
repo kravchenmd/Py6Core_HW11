@@ -47,7 +47,7 @@ class Phone(Field):
 
     @Field.value.setter
     def value(self, value: str) -> None:
-        pattern = r'(?:\+\d{12,13}\b)|(?:\b(?<!\+)\d{10,11}\b)|(?:\b\d{2}\b)'
+        pattern = r'(?:\+\d{12,13}\b)|(?:\b(?<!\+)\d{10,11}\b)|(?:\b\d{2}(?!\W)\b)'
         if re.match(pattern, value):
             Field.value.fset(self, value)
         else:
@@ -74,6 +74,12 @@ class Birthday(Field):
     def birthday_date(self) -> str:
         date = self.value.strftime("%d.%m.%Y")
         return date
+
+    def get_month(self) -> str:
+        return self.value.month
+
+    def get_day(self) -> str:
+        return self.value.day
 
 
 class Record:
@@ -178,7 +184,7 @@ def func_arg_error(func):
             f_name = func.__name__
             if f_name in ('exit_program', 'hello', 'show_all_phones'):
                 return "ERROR: This command has to be written without arguments!"
-            if f_name == 'show_phone':
+            if f_name in ('show_phone', 'days_to_birthday'):
                 return "ERROR: This command needs 1 arguments: 'name' separated by 1 space!"
             if f_name in ('add_contact',):
                 return "ERROR: This command needs 1 obligatory argument 'name' and 2 supplementary " \
@@ -290,15 +296,25 @@ def show_phone(contacts: AddressBook, name: str) -> str:
 def show_all_phones(contacts: AddressBook) -> str:
     if not contacts.data:
         return "There are no contacts to show yet..."
-
-    # result = []
-    # for _, record in contacts.data.items():
-    #     result.append(f"{record.name.get_name()}: " + record.get_phones())
-    # return '\n'.join(result)
     result = ''
     for page in contacts:
         result += page
     return result
+
+
+@func_arg_error
+def days_to_birthday(contacts: AddressBook, name: str) -> str:
+    if name not in contacts.data.keys():
+        return f"There is no contact with name '{name}'"
+
+    if contacts[name].birthday is None:
+        return "This contact has no birthday field!"
+    now = datetime.now()
+    birthday = datetime(now.year, contacts[name].birthday.get_month(), contacts[name].birthday.get_day())
+    if birthday < now:
+        birthday = birthday.replace(year=now.year + 1)
+    days = (birthday - now).days + 1
+    return f"{days} day(s) to {contacts[name].name.get_name()}'s birthday!"
 
 
 @func_arg_error
@@ -332,6 +348,8 @@ def choose_command(cmd: str) -> tuple:
         cmd_check = cmd[1].lower()
         if cmd_check == 'birthday':
             return edit_birthday, cmd[2:]
+    if cmd_check == 'days_to_birthday':
+        return days_to_birthday, cmd[1:]
     return None, "Unknown command!"
 
 
