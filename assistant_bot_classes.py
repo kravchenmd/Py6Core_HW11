@@ -7,6 +7,7 @@ EXIT_COMMANDS = ('good bye', 'close', 'exit')
 PAGINATION = 2  # default number of contacts per page
 
 
+# for rising custom errors in 'add_contact' function
 class FieldException(Exception):
     pass
 
